@@ -1,0 +1,138 @@
+{
+  "$schema-template": "2.0.0",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "paddycontainers": {
+                "username": "$CONTAINER_REGISTRY_USERNAME_paddycontainers",
+                "password": "$CONTAINER_REGISTRY_PASSWORD_paddycontainers",
+                "address": "paddycontainers.azurecr.io"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": {}
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "containerinsights": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azuremonitor/containerinsights/ciprod:iot-0.1.3.3"
+            },
+            "env": {
+              "UploadTarget": {
+                "value": "AzureMonitor"
+              },
+              "LogAnalyticsWorkspaceId": {
+                "value": "72486182-0407-4070-962c-e00bd7cdee34"
+              },
+              "LogAnalyticsSharedKey": {
+                "value": "yVBmmrqeU+49f+uSptjKdd5RVnDTSCnvrsWE/+pZBj+o7qtHS+6vBSCsxOtUgayuxQ2xMnWPg7rZj0V/NQcD3Q=="
+              },
+              "HubResourceID": {
+                "value": "/subscriptions/881ac365-d417-4791-b2a9-48789acbb88d/resourceGroups/MythicalEdge_RG/providers/Microsoft.Devices/IotHubs/mythicaledge1"
+              },
+              "MetricsEndpointsCSV": {
+                "value": "http://edgeHub:9600/metrics,http://edgeAgent:9600/metrics"
+              },
+              "ScrapeFrequencyInSecs": {
+                "value": "30"
+              }
+            }
+          },
+          "Sender": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.SendRcvModule}",
+              "createOptions": {}
+            }
+          },
+          "Receiver": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.SendRcvModule}",
+              "createOptions": {}
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "SenderToReceiver": "FROM /messages/modules/Sender/outputs/outputpayload INTO BrokeredEndpoint(\"/modules/Receiver/inputs/inputpayload\")",
+          "ReceiverToIotHub": "FROM /messages/modules/Receiver/outputs/output1 INTO $upstream",
+          "SenderToIotHub": "FROM /messages/modules/Sender/outputs/outputpayload INTO $upstream"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "Sender":
+    {
+      "properties.desired": {
+        "gentelemetry": true
+      }
+    },
+    "Receiver":
+    {
+      "properties.desired": {
+        "gentelemetry": false
+      }
+    }
+  }
+}
